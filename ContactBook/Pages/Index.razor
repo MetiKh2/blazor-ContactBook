@@ -1,0 +1,83 @@
+﻿@page "/"
+@inject Blazored.LocalStorage.ILocalStorageService localStorage
+@using ContactBook.Models;
+@using Newtonsoft.Json;
+@inject IMatToaster Toaster
+<PageTitle>Contact Book</PageTitle>
+<div style="background-color:#31363B;min-height:100vh;padding:20px">
+
+    <div class="container">
+        <h1 class="text-white fw-bold">Contact Book</h1>
+        <MatDivider></MatDivider>
+        <form onsubmit="@submit">
+            <p>
+                <MatStringField @bind-Value="@Contact.Name" Style="width:100%" Label="Name"></MatStringField>
+            </p>
+            <p>
+                <MatStringField Required @bind-Value="@Contact.Phone" Style="width:100%" Label="Phone"></MatStringField>
+            </p>
+            <p>
+                <MatStringField @bind-Value="@Contact.Address" Style="width:100%;height:200px" TextArea Label="Address"></MatStringField>
+            </p>
+            <p>
+                <MatButton Type="submit" Raised>Submit</MatButton>
+            </p>
+        </form>
+
+
+        <MatAccordion Multi="true">
+            @foreach (var contact in Contacts)
+            {
+                @*var ii = i; // capture variable*@
+                <MatExpansionPanel>
+                    <MatExpansionPanelSummary>
+                        <MatExpansionPanelHeader>@contact?.Name </MatExpansionPanelHeader>
+                    </MatExpansionPanelSummary>
+                    <MatExpansionPanelDetails>
+                        <div class="d-flex flex-row justify-content-between">
+                            <p>@contact?.Phone</p>
+                            <MatButton OnClick="()=>delete(contact.Phone)" Raised Style="background:red">Delete</MatButton>
+                        </div>
+                        <p>@contact?.Address</p>
+                    </MatExpansionPanelDetails>
+                </MatExpansionPanel>
+            }
+        </MatAccordion>
+
+
+    </div>
+
+</div>
+
+@code {
+    public Contact Contact { get; set; } = new Contact();
+    public List<Contact> Contacts { get; set; } = new List<Contact>();
+
+    private async void submit()
+    {
+        if (Contact.Phone == null) return;
+        Contacts.Add(new Contact() { Address = Contact.Address, Phone = Contact.Phone, Name = Contact.Name });
+        await localStorage.SetItemAsync("contacts", JsonConvert.SerializeObject(Contacts));
+        Toaster.Add("Contact SuccessFully Added", MatToastType.Success);
+        Contact = new Contact();
+        StateHasChanged();
+
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Contacts = JsonConvert
+            .DeserializeObject<List<Contact>>(await localStorage
+                .GetItemAsync<string>("contacts"));
+        Console.WriteLine(Contacts[0].Name);
+        StateHasChanged();
+    }
+    private async void delete(string phone)
+    {
+        Contacts.Remove(Contacts.FirstOrDefault(p => p.Phone == phone));
+        await localStorage.SetItemAsync("contacts", JsonConvert.SerializeObject(Contacts));
+        Toaster.Add("Contact Deleted", MatToastType.Danger);
+
+    }
+
+}
